@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: #070714;
+  color: white;
+  min-height: 100vh;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Prevent text selection on game controls */
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+}
