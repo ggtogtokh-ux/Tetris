@@ -163,7 +163,7 @@ function garbageForLines(count) {
 
 // ─── Hook ───────────────────────────────────────────────────────────────────
 
-export function useTetris({ active, onGarbage }) {
+export function useTetris({ active, onGarbage, onLock, onLineClear }) {
   // All mutable game state lives in a ref so the game loop never gets stale
   const stateRef = useRef({
     board: emptyBoard(),
@@ -178,8 +178,12 @@ export function useTetris({ active, onGarbage }) {
   // Refs for callbacks
   const activeRef = useRef(active)
   const onGarbageRef = useRef(onGarbage)
+  const onLockRef = useRef(onLock)
+  const onLineClearRef = useRef(onLineClear)
   useEffect(() => { activeRef.current = active }, [active])
   useEffect(() => { onGarbageRef.current = onGarbage }, [onGarbage])
+  useEffect(() => { onLockRef.current = onLock }, [onLock])
+  useEffect(() => { onLineClearRef.current = onLineClear }, [onLineClear])
 
   // Render trigger — increment to force re-render
   const [tick, setTick] = useState(0)
@@ -219,9 +223,12 @@ export function useTetris({ active, onGarbage }) {
     const { board: newBoard, cleared } = clearLines(st.board)
     st.board = newBoard
 
+    if (onLockRef.current) onLockRef.current()
+
     if (cleared > 0) {
       st.score += scoreForLines(cleared)
       st.lines += cleared
+      if (onLineClearRef.current) onLineClearRef.current(cleared)
       const garbage = garbageForLines(cleared)
       if (garbage > 0 && onGarbageRef.current) {
         onGarbageRef.current(garbage)
