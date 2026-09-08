@@ -125,8 +125,8 @@ function clearLines(board) {
 }
 
 function gravityMs(lines) {
-  // Start 700ms, decreases with lines cleared, min 80ms
-  return Math.max(80, 700 - Math.floor(lines / 5) * 50)
+  // Start 1000ms, slow 30ms decrease per level (every 5 lines), min 100ms
+  return Math.max(100, 1000 - Math.floor(lines / 5) * 30)
 }
 
 function getGhostY(board, piece) {

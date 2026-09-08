@@ -1,33 +1,36 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTetris } from '../../hooks/useTetris'
 import { sndMove, sndRotate, sndLock, sndHardDrop, sndLineClear, sndGameOver } from '../../utils/sounds'
 
-const CELL = 24
 const W = 10
 const H = 20
+const SIDE_W = 88  // side panel width
 
-function Board({ board }) {
+// ─── Board ───────────────────────────────────────────────────────────────────
+
+function Board({ board, cellSize }) {
+  const width = W * cellSize
+  const height = H * cellSize
   return (
     <div
       className="relative shrink-0"
       style={{
-        width: W * CELL,
-        height: H * CELL,
+        width,
+        height,
         background: '#060612',
         border: '1px solid #1e1e4a',
         boxShadow: '0 0 30px rgba(0,255,255,0.08), inset 0 0 30px rgba(0,0,0,0.5)',
       }}
     >
-      {/* Grid lines */}
-      <svg className="absolute inset-0 pointer-events-none" width={W * CELL} height={H * CELL} style={{ opacity: 0.08 }}>
+      <svg className="absolute inset-0 pointer-events-none" width={width} height={height} style={{ opacity: 0.08 }}>
         {Array.from({ length: W - 1 }, (_, i) => (
-          <line key={`v${i}`} x1={(i+1)*CELL} y1={0} x2={(i+1)*CELL} y2={H*CELL} stroke="#4488ff" strokeWidth="0.5" />
+          <line key={`v${i}`} x1={(i+1)*cellSize} y1={0} x2={(i+1)*cellSize} y2={height} stroke="#4488ff" strokeWidth="0.5" />
         ))}
         {Array.from({ length: H - 1 }, (_, i) => (
-          <line key={`h${i}`} x1={0} y1={(i+1)*CELL} x2={W*CELL} y2={(i+1)*CELL} stroke="#4488ff" strokeWidth="0.5" />
+          <line key={`h${i}`} x1={0} y1={(i+1)*cellSize} x2={width} y2={(i+1)*cellSize} stroke="#4488ff" strokeWidth="0.5" />
         ))}
       </svg>
       {board.map((row, r) =>
@@ -40,10 +43,10 @@ function Board({ board }) {
               key={`${r}-${c}`}
               style={{
                 position: 'absolute',
-                left: c * CELL + 1,
-                top: r * CELL + 1,
-                width: CELL - 2,
-                height: CELL - 2,
+                left: c * cellSize + 1,
+                top: r * cellSize + 1,
+                width: cellSize - 2,
+                height: cellSize - 2,
                 background: isGhost ? 'transparent' : color,
                 border: isGhost ? `1px solid ${color}66` : 'none',
                 boxShadow: isGhost ? 'none' : `0 0 7px ${color}88, inset 0 1px 0 rgba(255,255,255,0.25)`,
@@ -57,7 +60,9 @@ function Board({ board }) {
   )
 }
 
-function MiniPiece({ piece, size = 16 }) {
+// ─── Mini Piece ───────────────────────────────────────────────────────────────
+
+function MiniPiece({ piece, size = 14 }) {
   if (!piece) return <div style={{ width: 4 * size, height: 3 * size }} />
   const { shape, color } = piece
   const rows = shape.length
@@ -90,73 +95,56 @@ function MiniPiece({ piece, size = 16 }) {
   )
 }
 
-function SidePanel({ held, next, score, lines, level }) {
+// ─── Side Panel ───────────────────────────────────────────────────────────────
+
+function SidePanel({ held, next, score, lines, level, cellSize }) {
+  const miniSize = Math.max(10, Math.round(cellSize * 0.44))
   const box = {
     background: '#0a0a20',
     border: '1px solid #1e1e4a',
-    borderRadius: 10,
-    padding: '8px 10px',
+    borderRadius: 8,
+    padding: '6px 8px',
   }
+  const lbl = { color: '#64748b', fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }
   return (
-    <div className="flex flex-col gap-2" style={{ width: 80 }}>
-      {/* Hold */}
+    <div style={{ width: SIDE_W, display: 'flex', flexDirection: 'column', gap: 5 }}>
       <div style={box}>
-        <p style={{ color: '#64748b', fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Hold</p>
-        <MiniPiece piece={held} size={15} />
+        <p style={lbl}>Hold</p>
+        <MiniPiece piece={held} size={miniSize} />
       </div>
-
-      {/* Next */}
       <div style={box}>
-        <p style={{ color: '#64748b', fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Next</p>
-        <MiniPiece piece={next} size={15} />
+        <p style={lbl}>Next</p>
+        <MiniPiece piece={next} size={miniSize} />
       </div>
-
-      {/* Score */}
       <div style={box}>
-        <p style={{ color: '#64748b', fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 2 }}>Score</p>
-        <p style={{ color: '#fff', fontWeight: 900, fontSize: 15, textShadow: '0 0 8px rgba(168,85,247,0.7)' }}>{score}</p>
+        <p style={lbl}>Score</p>
+        <p style={{ color: '#fff', fontWeight: 900, fontSize: 14, textShadow: '0 0 8px rgba(168,85,247,0.7)' }}>{score}</p>
       </div>
-
-      {/* Lines */}
       <div style={box}>
-        <p style={{ color: '#64748b', fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 2 }}>Lines</p>
-        <p style={{ color: '#00ffff', fontWeight: 900, fontSize: 15 }}>{lines}</p>
+        <p style={lbl}>Lines</p>
+        <p style={{ color: '#00ffff', fontWeight: 900, fontSize: 14 }}>{lines}</p>
       </div>
-
-      {/* Level */}
       <div style={box}>
-        <p style={{ color: '#64748b', fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 2 }}>Level</p>
-        <p style={{ color: '#4ade80', fontWeight: 900, fontSize: 15 }}>{level}</p>
+        <p style={lbl}>Level</p>
+        <p style={{ color: '#4ade80', fontWeight: 900, fontSize: 14 }}>{level}</p>
       </div>
     </div>
   )
 }
 
-const btnBase = {
-  background: '#0a0a20',
-  borderRadius: 12,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  userSelect: 'none',
-  WebkitUserSelect: 'none',
-  cursor: 'pointer',
-  transition: 'transform 0.08s',
-  active: { transform: 'scale(0.92)' },
-}
+// ─── Touch Button ─────────────────────────────────────────────────────────────
 
-function TouchBtn({ onPress, color = '#fff', border = '#ffffff22', children, wide = false }) {
+function TouchBtn({ onPress, color = '#fff', border = '#ffffff22', children }) {
   return (
     <div
       onPointerDown={(e) => { e.preventDefault(); onPress() }}
       style={{
-        ...btnBase,
-        width: wide ? 90 : 72,
-        height: 48,
-        border: `1px solid ${border}`,
-        color,
-        fontSize: 20,
-        fontWeight: 700,
+        flex: 1, height: 46, borderRadius: 10,
+        background: '#0a0a20', border: `1px solid ${border}`, color,
+        fontSize: 20, fontWeight: 700,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'pointer', userSelect: 'none', WebkitUserSelect: 'none',
+        touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent',
       }}
     >
       {children}
@@ -164,11 +152,29 @@ function TouchBtn({ onPress, color = '#fff', border = '#ffffff22', children, wid
   )
 }
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function SoloPage() {
   const router = useRouter()
   const [phase, setPhase] = useState('idle')
   const [bestScore, setBestScore] = useState(0)
-  const prevLinesRef = useRef(0)
+  const [cellSize, setCellSize] = useState(24)
+  const [isTouch, setIsTouch] = useState(false)
+
+  useEffect(() => {
+    function calc() {
+      const touch = window.matchMedia('(hover: none)').matches
+      setIsTouch(touch)
+      const ctrlH = touch ? 116 : 0
+      const topBar = 46
+      const byW = Math.floor((window.innerWidth - 16 - 10 - SIDE_W) / W)
+      const byH = Math.floor((window.innerHeight - topBar - ctrlH - 16) / H)
+      setCellSize(Math.max(14, Math.min(byW, byH, 42)))
+    }
+    calc()
+    window.addEventListener('resize', calc, { passive: true })
+    return () => window.removeEventListener('resize', calc)
+  }, [])
 
   const { displayBoard, next, held, score, lines, gameOver, move, drop, hardDrop, rotate, holdPiece, reset } = useTetris({
     active: phase === 'playing',
@@ -179,7 +185,6 @@ export default function SoloPage() {
 
   const start = useCallback(() => {
     reset()
-    prevLinesRef.current = 0
     setPhase('playing')
   }, [reset])
 
@@ -211,8 +216,11 @@ export default function SoloPage() {
 
   return (
     <main
-      className="min-h-screen flex flex-col items-center select-none"
-      style={{ background: '#070714', paddingTop: 8, paddingBottom: 8 }}
+      className="select-none"
+      style={{
+        height: '100dvh', overflow: 'hidden', touchAction: 'none',
+        background: '#070714', display: 'flex', flexDirection: 'column',
+      }}
     >
       {/* Background grid */}
       <div className="fixed inset-0 pointer-events-none" style={{
@@ -221,7 +229,8 @@ export default function SoloPage() {
       }} />
 
       {/* Header */}
-      <div className="relative z-10 w-full flex items-center justify-between px-4 mb-3" style={{ maxWidth: 400 }}>
+      <div className="relative z-10 flex items-center justify-between shrink-0"
+        style={{ padding: '8px 16px', borderBottom: '1px solid #1a1a3a', background: '#06060f' }}>
         <button
           onClick={() => router.push('/')}
           style={{ color: '#475569', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer' }}
@@ -239,22 +248,24 @@ export default function SoloPage() {
       </div>
 
       {/* Game area */}
-      <div className="relative z-10 flex gap-3 items-start justify-center px-2">
-        <Board board={displayBoard} />
-        <SidePanel held={held} next={next} score={score} lines={lines} level={level} />
+      <div className="relative z-10 flex-1 flex items-center justify-center overflow-hidden"
+        style={{ gap: 10, padding: '0 8px' }}>
+        <Board board={displayBoard} cellSize={cellSize} />
+        <SidePanel held={held} next={next} score={score} lines={lines} level={level} cellSize={cellSize} />
       </div>
 
-      {/* Touch controls */}
-      {phase === 'playing' && (
-        <div className="relative z-10 mt-3 flex flex-col gap-2 items-center">
-          <div className="flex gap-2">
-            <TouchBtn onPress={() => { holdPiece() }} color="#facc15" border="#eab30855">
-              <span style={{ fontSize: 11, fontWeight: 700 }}>HOLD</span>
+      {/* Touch controls — mobile only */}
+      {isTouch && phase === 'playing' && (
+        <div className="relative z-10 shrink-0"
+          style={{ padding: '6px 10px 8px', borderTop: '1px solid #1a1a3a', background: '#06060f' }}>
+          <div style={{ display: 'flex', gap: 5, marginBottom: 5 }}>
+            <TouchBtn onPress={() => holdPiece()} color="#facc15" border="#eab30855">
+              <span style={{ fontSize: 10, fontWeight: 800 }}>HOLD</span>
             </TouchBtn>
             <TouchBtn onPress={() => { rotate(); sndRotate() }} color="#a855f7" border="#a855f755">↺</TouchBtn>
             <TouchBtn onPress={() => { hardDrop(); sndHardDrop() }} color="#00ffff" border="#00ffff55">⤓</TouchBtn>
           </div>
-          <div className="flex gap-2">
+          <div style={{ display: 'flex', gap: 5 }}>
             <TouchBtn onPress={() => { move(-1); sndMove() }}>←</TouchBtn>
             <TouchBtn onPress={() => { drop(); sndMove() }}>↓</TouchBtn>
             <TouchBtn onPress={() => { move(1); sndMove() }}>→</TouchBtn>
@@ -271,8 +282,17 @@ export default function SoloPage() {
             <h2 style={{ color: '#fff', fontSize: 26, fontWeight: 900, letterSpacing: '0.1em' }}>SOLO TETRIS</h2>
             <p style={{ color: '#64748b', fontSize: 13 }}>Survive as long as possible</p>
             <div style={{ color: '#475569', fontSize: 12, lineHeight: 1.8 }}>
-              <p>Arrow keys / touch buttons</p>
-              <p>Space = hard drop · Shift = hold</p>
+              {isTouch ? (
+                <>
+                  <p>Touch buttons to play</p>
+                  <p>HOLD button or swipe</p>
+                </>
+              ) : (
+                <>
+                  <p>Arrow keys to move and rotate</p>
+                  <p>Space = hard drop · C / Shift = hold</p>
+                </>
+              )}
             </div>
             <button
               onClick={start}
