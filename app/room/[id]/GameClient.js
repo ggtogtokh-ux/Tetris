@@ -89,88 +89,86 @@ function TetrisBoard({ board, cellSize, dimmed = false }) {
   )
 }
 
-// ─── Next Piece Preview ──────────────────────────────────────────────────────
+// ─── Mini Piece (Hold / Next) ────────────────────────────────────────────────
 
-function NextPiece({ piece }) {
-  if (!piece) return null
-  const size = 20
-  const rows = piece.shape.length
-  const cols = piece.shape[0].length
-
+function MiniPiece({ piece, size = 14 }) {
+  if (!piece) return <div style={{ width: 4 * size, height: 3 * size }} />
+  const { shape, color } = piece
+  const rows = shape.length
+  const cols = shape[0].length
   return (
-    <div
-      style={{
-        width: 4 * size + 8,
-        height: 4 * size + 8,
-        background: '#0a0a1a',
-        border: '1px solid #1a1a3a',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: 8,
-        padding: 4,
-      }}
-    >
-      <div style={{ position: 'relative', width: cols * size, height: rows * size }}>
-        {piece.shape.map((row, r) =>
-          row.map((cell, c) => {
-            if (!cell) return null
-            return (
-              <div
-                key={`${r}-${c}`}
-                style={{
-                  position: 'absolute',
-                  left: c * size + 1,
-                  top: r * size + 1,
-                  width: size - 2,
-                  height: size - 2,
-                  background: piece.color,
-                  boxShadow: `0 0 6px ${piece.color}88`,
-                  borderRadius: 1,
-                }}
-              />
-            )
-          })
-        )}
-      </div>
+    <div style={{ width: 4 * size, height: 3 * size, position: 'relative' }}>
+      {shape.map((row, r) =>
+        row.map((cell, c) => {
+          if (!cell) return null
+          const offX = Math.floor((4 - cols) / 2)
+          const offY = Math.floor((3 - rows) / 2)
+          return (
+            <div
+              key={`${r}-${c}`}
+              style={{
+                position: 'absolute',
+                left: (offX + c) * size + 1,
+                top: (offY + r) * size + 1,
+                width: size - 2,
+                height: size - 2,
+                background: color,
+                boxShadow: `0 0 5px ${color}99`,
+                borderRadius: 2,
+              }}
+            />
+          )
+        })
+      )}
+    </div>
+  )
+}
+
+// ─── Side Box ────────────────────────────────────────────────────────────────
+
+function SideBox({ label, children }) {
+  return (
+    <div style={{
+      background: '#0a0a20',
+      border: '1px solid #1e1e4a',
+      borderRadius: 10,
+      padding: '6px 8px',
+    }}>
+      <p style={{ color: '#64748b', fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 5 }}>
+        {label}
+      </p>
+      {children}
     </div>
   )
 }
 
 // ─── Touch Button ────────────────────────────────────────────────────────────
 
-function TouchBtn({ onPress, children, wide = false, color = '#00ffff' }) {
-  const handleTouch = useCallback(
-    (e) => {
-      e.preventDefault()
-      onPress()
-    },
-    [onPress]
-  )
-
+function TouchBtn({ onPress, children, color = '#ffffff' }) {
   return (
-    <button
-      onTouchStart={handleTouch}
-      onMouseDown={handleTouch}
-      className="no-select select-none"
+    <div
+      onPointerDown={(e) => { e.preventDefault(); onPress() }}
       style={{
-        flex: wide ? 2 : 1,
-        padding: '12px 8px',
+        flex: 1,
+        height: 46,
         borderRadius: 10,
-        background: `${color}15`,
-        border: `1px solid ${color}44`,
+        background: '#0a0a20',
+        border: `1px solid ${color}33`,
         color,
         fontSize: 20,
-        fontWeight: 'bold',
+        fontWeight: 700,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         cursor: 'pointer',
-        WebkitTapHighlightColor: 'transparent',
         userSelect: 'none',
         WebkitUserSelect: 'none',
         touchAction: 'manipulation',
+        WebkitTapHighlightColor: 'transparent',
       }}
     >
       {children}
-    </button>
+    </div>
   )
 }
 
@@ -258,6 +256,7 @@ export default function GameClient({ roomId }) {
   const {
     displayBoard,
     next,
+    held,
     score,
     lines,
     gameOver,
@@ -265,6 +264,7 @@ export default function GameClient({ roomId }) {
     drop,
     hardDrop,
     rotate,
+    holdPiece,
     addGarbage,
     reset,
   } = useTetris({
@@ -276,6 +276,14 @@ export default function GameClient({ roomId }) {
 
   const scoreRef = useRef(score)
   useEffect(() => { scoreRef.current = score }, [score])
+
+  // Always-current refs so interval callbacks never read stale closures
+  const displayBoardRef = useRef(displayBoard)
+  displayBoardRef.current = displayBoard
+  const linesRef = useRef(lines)
+  linesRef.current = lines
+  const opponentScoreRef = useRef(0)
+  useEffect(() => { opponentScoreRef.current = opponentScore }, [opponentScore])
 
   // ── Room hook ─────────────────────────────────────────────────────────────
   const opponentConnectedFiredRef = useRef(false)
@@ -375,10 +383,10 @@ export default function GameClient({ roomId }) {
       if (remaining <= 0) {
         clearInterval(timerRef.current)
         if (phaseRef.current === 'playing') {
-          // Timer ended — compare scores
           const myScore = scoreRef.current
           setMyFinalScore(myScore)
-          setWinner(myScore >= opponentScore ? 'me' : 'opponent')
+          setOppFinalScore(opponentScoreRef.current)
+          setWinner(myScore >= opponentScoreRef.current ? 'me' : 'opponent')
           endGame()
         }
       }
@@ -392,10 +400,14 @@ export default function GameClient({ roomId }) {
   }
 
   // ── Board broadcast ───────────────────────────────────────────────────────
+  const sendBoardRef = useRef(sendBoard)
+  useEffect(() => { sendBoardRef.current = sendBoard }, [sendBoard])
+
   useEffect(() => {
     if (phase === 'playing') {
       boardSendRef.current = setInterval(() => {
-        sendBoard(displayBoard, scoreRef.current, lines)
+        // Use refs so we always send the latest board/lines, not stale closure values
+        sendBoardRef.current(displayBoardRef.current, scoreRef.current, linesRef.current)
       }, 150)
     } else {
       if (boardSendRef.current) clearInterval(boardSendRef.current)
@@ -429,6 +441,7 @@ export default function GameClient({ roomId }) {
         case 'ArrowUp': e.preventDefault(); rotate(); sndRotate(); break
         case 'ArrowDown': e.preventDefault(); drop(); sndMove(); break
         case ' ': e.preventDefault(); hardDrop(); sndHardDrop(); break
+        case 'Shift': case 'c': case 'C': e.preventDefault(); holdPiece(); break
       }
     }
     window.addEventListener('keydown', handleKey)
@@ -673,94 +686,94 @@ export default function GameClient({ roomId }) {
   const isCountdown = phase === 'countdown'
   const timerWarning = timeLeft < 30_000
 
+  const CELL = 24
+  const OPP_CELL = 9
+
+  const numStyle = (color) => ({
+    color, fontWeight: 900, fontSize: 15, lineHeight: 1,
+  })
+
   return (
     <main
-      className="min-h-screen bg-[#070714] flex flex-col items-center justify-between select-none"
-      style={{ touchAction: 'none', overflow: 'hidden', maxHeight: '100dvh' }}
+      className="bg-[#070714] flex flex-col select-none"
+      style={{ touchAction: 'none', overflow: 'hidden', height: '100dvh', maxHeight: '100dvh' }}
     >
-      {/* ── Top bar: timer + scores ── */}
+      {/* ── Top bar: timer ── */}
       <div
-        className="w-full flex items-center justify-between px-4 py-2 shrink-0"
-        style={{
-          background: '#0a0a1a',
-          borderBottom: '1px solid #1a1a3a',
-        }}
+        className="w-full flex items-center justify-center px-4 shrink-0"
+        style={{ background: '#07071a', borderBottom: '1px solid #1e1e4a', padding: '6px 16px' }}
       >
-        <div className="flex flex-col items-start">
-          <span className="text-gray-500 text-xs uppercase tracking-widest">You</span>
-          <span
-            className="text-xl font-black font-mono"
-            style={{ color: '#00ffff', textShadow: '0 0 10px rgba(0,255,255,0.5)' }}
-          >
-            {score}
-          </span>
-        </div>
-
-        <div className="flex flex-col items-center">
-          <span className="text-gray-500 text-xs uppercase tracking-widest mb-0.5">Time</span>
-          <span
-            className="text-2xl font-black font-mono"
-            style={{
-              color: timerWarning ? '#ef4444' : '#ffffff',
-              textShadow: timerWarning ? '0 0 15px rgba(239,68,68,0.6)' : 'none',
-              transition: 'color 0.3s',
-            }}
-          >
-            {formatTime(timeLeft)}
-          </span>
-        </div>
-
-        <div className="flex flex-col items-end">
-          <span className="text-gray-500 text-xs uppercase tracking-widest">Opponent</span>
-          <span className="text-xl font-black font-mono text-gray-400">
-            {opponentScore}
-          </span>
-        </div>
+        <span
+          className="font-black font-mono text-2xl"
+          style={{
+            color: timerWarning ? '#ef4444' : '#ffffff',
+            textShadow: timerWarning ? '0 0 15px rgba(239,68,68,0.7)' : '0 0 10px rgba(255,255,255,0.2)',
+            transition: 'color 0.3s',
+          }}
+        >
+          {formatTime(timeLeft)}
+        </span>
       </div>
 
-      {/* ── Boards area ── */}
+      {/* ── Game area ── */}
       <div
-        className="flex items-start justify-center gap-3 px-3 py-2 relative"
-        style={{ flexGrow: 1, overflow: 'hidden' }}
+        className="flex justify-center items-start shrink-0"
+        style={{ gap: 8, padding: '8px 8px 0', flex: 1, overflow: 'hidden' }}
       >
-        {/* My board + next piece */}
-        <div className="flex flex-col items-center gap-2">
-          <div className="relative">
-            <TetrisBoard board={displayBoard} cellSize={26} />
-            {isCountdown && <CountdownOverlay value={countdownVal} />}
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-gray-600 text-xs uppercase tracking-widest">Next</span>
-            <NextPiece piece={next} />
-          </div>
+        {/* My board */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <TetrisBoard board={displayBoard} cellSize={CELL} />
+          {isCountdown && <CountdownOverlay value={countdownVal} />}
         </div>
 
-        {/* Opponent board */}
-        <div className="flex flex-col items-center gap-2 pt-1">
-          <TetrisBoard board={opponentBoard} cellSize={14} dimmed={!isPlaying} />
-          <span className="text-gray-600 text-xs uppercase tracking-widest">Opponent</span>
+        {/* Right side panel */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: CELL * OPP_CELL / 10 * 10 + 0, minWidth: 90, maxWidth: 90 }}>
+          {/* Hold */}
+          <SideBox label="Hold">
+            <MiniPiece piece={held} size={14} />
+          </SideBox>
+
+          {/* Next */}
+          <SideBox label="Next">
+            <MiniPiece piece={next} size={14} />
+          </SideBox>
+
+          {/* My score */}
+          <SideBox label="You">
+            <p style={numStyle('#00ffff')}>{score}</p>
+          </SideBox>
+
+          {/* Opponent score */}
+          <SideBox label="Opponent">
+            <p style={numStyle('#a855f7')}>{opponentScore}</p>
+          </SideBox>
+
+          {/* Opponent board */}
+          <div style={{ background: '#0a0a20', border: '1px solid #1e1e4a', borderRadius: 10, padding: '6px 8px' }}>
+            <p style={{ color: '#64748b', fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 5 }}>
+              Board
+            </p>
+            <TetrisBoard board={opponentBoard} cellSize={OPP_CELL} dimmed={!isPlaying} />
+          </div>
         </div>
       </div>
 
       {/* ── Touch controls ── */}
       <div
-        className="w-full flex flex-col gap-2 px-4 pb-4 pt-2 shrink-0"
-        style={{
-          background: '#0a0a1a',
-          borderTop: '1px solid #1a1a3a',
-        }}
+        className="w-full shrink-0"
+        style={{ background: '#07071a', borderTop: '1px solid #1e1e4a', padding: '8px 10px 10px' }}
       >
-        {/* Row 1: Rotate + Hard Drop */}
-        <div className="flex gap-2">
-          <TouchBtn onPress={() => { rotate(); sndRotate() }} color="#a855f7">↺ Rotate</TouchBtn>
-          <TouchBtn onPress={() => { hardDrop(); sndHardDrop() }} color="#00ffff">⬇ Hard Drop</TouchBtn>
+        <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+          <TouchBtn onPress={() => { holdPiece() }} color="#facc15">
+            <span style={{ fontSize: 11, fontWeight: 700 }}>HOLD</span>
+          </TouchBtn>
+          <TouchBtn onPress={() => { rotate(); sndRotate() }} color="#a855f7">↺</TouchBtn>
+          <TouchBtn onPress={() => { hardDrop(); sndHardDrop() }} color="#00ffff">⤓</TouchBtn>
         </div>
-
-        {/* Row 2: Left + Soft Drop + Right */}
-        <div className="flex gap-2">
-          <TouchBtn onPress={() => { move(-1); sndMove() }} color="#3b82f6">← Left</TouchBtn>
-          <TouchBtn onPress={() => { drop(); sndMove() }} color="#22c55e">▽ Soft Drop</TouchBtn>
-          <TouchBtn onPress={() => { move(1); sndMove() }} color="#3b82f6">→ Right</TouchBtn>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <TouchBtn onPress={() => { move(-1); sndMove() }}>←</TouchBtn>
+          <TouchBtn onPress={() => { drop(); sndMove() }}>↓</TouchBtn>
+          <TouchBtn onPress={() => { move(1); sndMove() }}>→</TouchBtn>
         </div>
       </div>
 

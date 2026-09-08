@@ -37,23 +37,29 @@ export function useRoom(roomId, playerNum, callbacks) {
     channelRef.current = channel
 
     // ── Presence ────────────────────────────────────────────────────────────
+    // Track whether we've already notified about opponent so we don't double-fire
+    // (both 'sync' and 'join' can fire when opponent connects)
+    let opponentNotified = false
+    const notifyOpponent = () => {
+      if (opponentNotified) return
+      opponentNotified = true
+      callbacksRef.current?.onOpponentConnected?.()
+    }
+
     channel.on('presence', { event: 'sync' }, () => {
       const state = channel.presenceState()
       const keys = Object.keys(state)
       const hasOpponent = keys.some(k => k.includes(`player-${opponentNum}`))
-      if (hasOpponent && callbacksRef.current?.onOpponentConnected) {
-        callbacksRef.current.onOpponentConnected()
-      }
+      if (hasOpponent) notifyOpponent()
     })
 
     channel.on('presence', { event: 'join' }, ({ key }) => {
-      if (key.includes(`player-${opponentNum}`) && callbacksRef.current?.onOpponentConnected) {
-        callbacksRef.current.onOpponentConnected()
-      }
+      if (key.includes(`player-${opponentNum}`)) notifyOpponent()
     })
 
     channel.on('presence', { event: 'leave' }, ({ key }) => {
-      // Could handle disconnect here if needed
+      // Reset so reconnect works
+      if (key.includes(`player-${opponentNum}`)) opponentNotified = false
     })
 
     // ── Broadcast: board sync ────────────────────────────────────────────────
