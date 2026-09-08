@@ -150,12 +150,12 @@ function TouchBtn({ onPress, children, color = '#ffffff' }) {
       onPointerDown={(e) => { e.preventDefault(); onPress() }}
       style={{
         flex: 1,
-        height: 46,
-        borderRadius: 10,
-        background: '#0a0a20',
-        border: `1px solid ${color}33`,
+        height: 64,
+        borderRadius: 14,
+        background: '#0d0d24',
+        border: `1px solid ${color}44`,
         color,
-        fontSize: 20,
+        fontSize: 28,
         fontWeight: 700,
         display: 'flex',
         alignItems: 'center',
@@ -239,7 +239,7 @@ export default function GameClient({ roomId }) {
       const avail = window.innerWidth - 16 - 8 - (boxW * 2 + 6)
       const byW = Math.floor(avail / 2 / 10)
       // Height: topbar(42) + gamePad(8) + scoreStrip+gap(34) + safety(10)
-      const ctrlH = touch ? 116 : 0
+      const ctrlH = touch ? 158 : 0
       const overhead = 94 + ctrlH
       const byH = Math.floor((window.innerHeight - overhead) / 20)
       setCellSize(Math.max(10, Math.min(byW, byH, 28)))
@@ -794,16 +794,16 @@ export default function GameClient({ roomId }) {
       {isTouch && (
         <div style={{
           flexShrink: 0, background: '#06060f', borderTop: '1px solid #1a1a3a',
-          padding: '6px 10px 8px',
+          padding: '8px 10px 12px',
         }}>
-          <div style={{ display: 'flex', gap: 5, marginBottom: 5 }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
             <TouchBtn onPress={() => { holdPiece() }} color="#facc15">
-              <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.05em' }}>HOLD</span>
+              <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.05em' }}>HOLD</span>
             </TouchBtn>
             <TouchBtn onPress={() => { rotate(); sndRotate() }} color="#a855f7">↺</TouchBtn>
             <TouchBtn onPress={() => { hardDrop(); sndHardDrop() }} color="#00ffff">⤓</TouchBtn>
           </div>
-          <div style={{ display: 'flex', gap: 5 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
             <TouchBtn onPress={() => { move(-1); sndMove() }}>←</TouchBtn>
             <TouchBtn onPress={() => { drop(); sndMove() }}>↓</TouchBtn>
             <TouchBtn onPress={() => { move(1); sndMove() }}>→</TouchBtn>

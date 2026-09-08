@@ -139,9 +139,9 @@ function TouchBtn({ onPress, color = '#fff', border = '#ffffff22', children }) {
     <div
       onPointerDown={(e) => { e.preventDefault(); onPress() }}
       style={{
-        flex: 1, height: 46, borderRadius: 10,
-        background: '#0a0a20', border: `1px solid ${border}`, color,
-        fontSize: 20, fontWeight: 700,
+        flex: 1, height: 64, borderRadius: 14,
+        background: '#0d0d24', border: `1px solid ${border}`, color,
+        fontSize: 28, fontWeight: 700,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         cursor: 'pointer', userSelect: 'none', WebkitUserSelect: 'none',
         touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent',
@@ -165,7 +165,7 @@ export default function SoloPage() {
     function calc() {
       const touch = window.matchMedia('(hover: none)').matches
       setIsTouch(touch)
-      const ctrlH = touch ? 116 : 0
+      const ctrlH = touch ? 158 : 0
       const topBar = 46
       const byW = Math.floor((window.innerWidth - 16 - 10 - SIDE_W) / W)
       const byH = Math.floor((window.innerHeight - topBar - ctrlH - 16) / H)
@@ -257,15 +257,15 @@ export default function SoloPage() {
       {/* Touch controls — mobile only */}
       {isTouch && phase === 'playing' && (
         <div className="relative z-10 shrink-0"
-          style={{ padding: '6px 10px 8px', borderTop: '1px solid #1a1a3a', background: '#06060f' }}>
-          <div style={{ display: 'flex', gap: 5, marginBottom: 5 }}>
-            <TouchBtn onPress={() => holdPiece()} color="#facc15" border="#eab30855">
-              <span style={{ fontSize: 10, fontWeight: 800 }}>HOLD</span>
+          style={{ padding: '8px 10px 12px', borderTop: '1px solid #1a1a3a', background: '#06060f' }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+            <TouchBtn onPress={() => holdPiece()} color="#facc15" border="#eab30866">
+              <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.05em' }}>HOLD</span>
             </TouchBtn>
-            <TouchBtn onPress={() => { rotate(); sndRotate() }} color="#a855f7" border="#a855f755">↺</TouchBtn>
-            <TouchBtn onPress={() => { hardDrop(); sndHardDrop() }} color="#00ffff" border="#00ffff55">⤓</TouchBtn>
+            <TouchBtn onPress={() => { rotate(); sndRotate() }} color="#a855f7" border="#a855f766">↺</TouchBtn>
+            <TouchBtn onPress={() => { hardDrop(); sndHardDrop() }} color="#00ffff" border="#00ffff66">⤓</TouchBtn>
           </div>
-          <div style={{ display: 'flex', gap: 5 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
             <TouchBtn onPress={() => { move(-1); sndMove() }}>←</TouchBtn>
             <TouchBtn onPress={() => { drop(); sndMove() }}>↓</TouchBtn>
             <TouchBtn onPress={() => { move(1); sndMove() }}>→</TouchBtn>
