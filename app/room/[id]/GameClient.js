@@ -234,17 +234,15 @@ export default function GameClient({ roomId }) {
     function calc() {
       const touch = window.matchMedia('(hover: none)').matches
       setIsTouch(touch)
-      const pad = 16
-      const sideW = MINI_W * 2 + 3 * 2
-      const gap = 8
-      const avail = window.innerWidth - pad - gap - sideW
+      // Width: panelBox has 4px padding + 1px border each side → box renders as MINI_W+10=42px
+      const boxW = MINI_W + 10
+      const avail = window.innerWidth - 16 - 8 - (boxW * 2 + 6)
       const byW = Math.floor(avail / 2 / 10)
-      const topBar = 46
-      const ctrlH = touch ? 114 : 0
-      const scoreStrip = 36  // Lines/Level strip + gap above board
-      const availH = window.innerHeight - topBar - ctrlH - scoreStrip - 12
-      const byH = Math.floor(availH / 20)
-      setCellSize(Math.max(10, Math.min(byW, byH, 30)))
+      // Height: topbar(42) + gamePad(8) + scoreStrip+gap(34) + safety(10)
+      const ctrlH = touch ? 116 : 0
+      const overhead = 94 + ctrlH
+      const byH = Math.floor((window.innerHeight - overhead) / 20)
+      setCellSize(Math.max(10, Math.min(byW, byH, 28)))
     }
     calc()
     window.addEventListener('resize', calc, { passive: true })
@@ -779,7 +777,7 @@ export default function GameClient({ roomId }) {
         {/* ── OPP BOARD COLUMN ── */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
           {/* Empty strip (same height as my score strip) */}
-          <div style={{ height: 28 }} />
+          <div style={{ height: 34 }} />
 
           {/* Opp board (no side panels) */}
           <div style={{
