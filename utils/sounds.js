@@ -6,7 +6,7 @@ function ctx() {
   return _ctx
 }
 
-function tone(freq, dur, type = 'sine', vol = 0.12) {
+function tone(freq, dur, type = 'sine', vol = 0.35) {
   const c = ctx()
   if (!c) return
   try {
@@ -24,21 +24,21 @@ function tone(freq, dur, type = 'sine', vol = 0.12) {
   } catch (_) {}
 }
 
-export function sndMove()     { tone(220, 0.04, 'sine', 0.07) }
-export function sndRotate()   { tone(380, 0.08, 'sine', 0.09) }
-export function sndLock()     { tone(110, 0.14, 'sine', 0.16) }
+export function sndMove()     { tone(220, 0.04, 'sine', 0.22) }
+export function sndRotate()   { tone(380, 0.08, 'sine', 0.28) }
+export function sndLock()     { tone(110, 0.14, 'sine', 0.45) }
 export function sndHardDrop() {
-  tone(300, 0.03, 'sine', 0.15)
-  setTimeout(() => tone(140, 0.12, 'sine', 0.2), 35)
+  tone(300, 0.03, 'sine', 0.45)
+  setTimeout(() => tone(140, 0.12, 'sine', 0.55), 35)
 }
 export function sndLineClear(n) {
   const notes = [523, 659, 784, 1047]
   for (let i = 0; i < Math.min(n, 4); i++) {
-    setTimeout(() => tone(notes[i], 0.18, 'sine', 0.22), i * 70)
+    setTimeout(() => tone(notes[i], 0.18, 'sine', 0.6), i * 70)
   }
 }
 export function sndGameOver() {
   [440, 349, 261, 196].forEach((f, i) =>
-    setTimeout(() => tone(f, 0.32, 'sawtooth', 0.1), i * 210)
+    setTimeout(() => tone(f, 0.32, 'sawtooth', 0.3), i * 210)
   )
 }
