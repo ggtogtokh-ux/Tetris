@@ -241,22 +241,32 @@ export default function Home() {
         </div>
 
         {/* Solo mode */}
-        <div className="w-full flex flex-col items-center gap-2">
+        <div className="w-full flex flex-col items-center gap-3">
           <div className="w-full flex items-center gap-4">
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent to-gray-800" />
-            <span className="text-gray-700 text-xs font-medium">OR PLAY ALONE</span>
-            <div className="flex-1 h-px bg-gradient-to-l from-transparent to-gray-800" />
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent to-gray-700" />
+            <span className="text-gray-500 text-xs font-bold tracking-widest uppercase">Or Play Alone</span>
+            <div className="flex-1 h-px bg-gradient-to-l from-transparent to-gray-700" />
           </div>
           <button
             onClick={() => router.push('/solo')}
-            className="w-full py-2 rounded-xl font-bold text-sm tracking-wider transition-all duration-200 active:scale-95"
+            className="w-full py-3 rounded-xl font-black text-lg tracking-widest transition-all duration-200 active:scale-95"
             style={{
-              background: '#0d0d2b',
-              border: '1px solid #334155',
-              color: '#94a3b8',
+              background: 'linear-gradient(135deg, #4ade8022, #00ffff22)',
+              border: '1px solid #4ade8066',
+              color: '#4ade80',
+              boxShadow: '0 0 22px rgba(74,222,128,0.18)',
+              letterSpacing: '0.18em',
             }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = '#475569'; e.currentTarget.style.color = '#cbd5e1' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = '#334155'; e.currentTarget.style.color = '#94a3b8' }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #4ade8033, #00ffff33)'
+              e.currentTarget.style.boxShadow = '0 0 35px rgba(74,222,128,0.35)'
+              e.currentTarget.style.borderColor = '#4ade80aa'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #4ade8022, #00ffff22)'
+              e.currentTarget.style.boxShadow = '0 0 22px rgba(74,222,128,0.18)'
+              e.currentTarget.style.borderColor = '#4ade8066'
+            }}
           >
             Solo Mode
           </button>
