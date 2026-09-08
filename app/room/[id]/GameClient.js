@@ -234,9 +234,11 @@ export default function GameClient({ roomId }) {
     function calc() {
       const touch = window.matchMedia('(hover: none)').matches
       setIsTouch(touch)
-      // Width: panelBox has 4px padding + 1px border each side → box renders as MINI_W+10=42px
+      // Width: mobile has no side panels → full width for boards
       const boxW = MINI_W + 10
-      const avail = window.innerWidth - 16 - 8 - (boxW * 2 + 6)
+      const avail = touch
+        ? window.innerWidth - 24               // mobile: just gap + padding
+        : window.innerWidth - 24 - (boxW * 2 + 6) // desktop: subtract HOLD/NEXT panels
       const byW = Math.floor(avail / 2 / 10)
       // Height: topbar(42) + gamePad(8) + scoreStrip+gap(34) + safety(10)
       const ctrlH = touch ? 158 : 0
@@ -737,57 +739,75 @@ export default function GameClient({ roomId }) {
         flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
         gap: 8, padding: '6px 8px 0', overflow: 'hidden',
       }}>
-
-        {/* ── MY BOARD COLUMN ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          {/* Score/Lines strip above board */}
-          <div style={{ display: 'flex', gap: 4, width: '100%', justifyContent: 'space-around' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={lbl}>Lines</div>
-              <div style={{ color: '#00ffff', fontWeight: 900, fontSize: 13 }}>{lines}</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={lbl}>Level</div>
-              <div style={{ color: '#4ade80', fontWeight: 900, fontSize: 13 }}>{Math.floor(lines / 5) + 1}</div>
-            </div>
-          </div>
-
-          {/* Hold + Board + Next */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 3 }}>
-            {/* Hold */}
-            <div style={{ ...panelBox, width: MINI_W }}>
-              <span style={lbl}>Hold</span>
-              <MiniPiece piece={held} size={miniSize} />
+        {isTouch ? (
+          // ── MOBILE: boards only, no side panels ──────────────────────────
+          <>
+            {/* My board column */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+              <div style={{ display: 'flex', gap: 4, width: '100%', justifyContent: 'space-around' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={lbl}>Lines</div>
+                  <div style={{ color: '#00ffff', fontWeight: 900, fontSize: 13 }}>{lines}</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={lbl}>Level</div>
+                  <div style={{ color: '#4ade80', fontWeight: 900, fontSize: 13 }}>{Math.floor(lines / 5) + 1}</div>
+                </div>
+              </div>
+              <div style={{ position: 'relative', border: '1.5px solid rgba(0,255,255,0.35)', borderRadius: 3, boxShadow: '0 0 20px rgba(0,255,255,0.15)' }}>
+                <TetrisBoard board={displayBoard} cellSize={cellSize} />
+                {isCountdown && <CountdownOverlay value={countdownVal} />}
+              </div>
             </div>
 
-            {/* My board */}
-            <div style={{ position: 'relative', border: '1.5px solid rgba(0,255,255,0.25)', borderRadius: 3, boxShadow: '0 0 20px rgba(0,255,255,0.1), inset 0 0 20px rgba(0,0,0,0.3)' }}>
-              <TetrisBoard board={displayBoard} cellSize={cellSize} />
-              {isCountdown && <CountdownOverlay value={countdownVal} />}
+            {/* Opp board column */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+              <div style={{ height: 34 }} />
+              <div style={{ border: '1.5px solid rgba(244,114,182,0.35)', borderRadius: 3, boxShadow: '0 0 20px rgba(244,114,182,0.15)', opacity: isPlaying ? 1 : 0.55 }}>
+                <TetrisBoard board={opponentBoard} cellSize={cellSize} dimmed={!isPlaying} />
+              </div>
+            </div>
+          </>
+        ) : (
+          // ── DESKTOP: full layout with HOLD/NEXT panels ────────────────────
+          <>
+            {/* My board column */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+              <div style={{ display: 'flex', gap: 4, width: '100%', justifyContent: 'space-around' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={lbl}>Lines</div>
+                  <div style={{ color: '#00ffff', fontWeight: 900, fontSize: 13 }}>{lines}</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={lbl}>Level</div>
+                  <div style={{ color: '#4ade80', fontWeight: 900, fontSize: 13 }}>{Math.floor(lines / 5) + 1}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 3 }}>
+                <div style={{ ...panelBox, width: MINI_W }}>
+                  <span style={lbl}>Hold</span>
+                  <MiniPiece piece={held} size={miniSize} />
+                </div>
+                <div style={{ position: 'relative', border: '1.5px solid rgba(0,255,255,0.25)', borderRadius: 3, boxShadow: '0 0 20px rgba(0,255,255,0.1), inset 0 0 20px rgba(0,0,0,0.3)' }}>
+                  <TetrisBoard board={displayBoard} cellSize={cellSize} />
+                  {isCountdown && <CountdownOverlay value={countdownVal} />}
+                </div>
+                <div style={{ ...panelBox, width: MINI_W }}>
+                  <span style={lbl}>Next</span>
+                  <MiniPiece piece={next} size={miniSize} />
+                </div>
+              </div>
             </div>
 
-            {/* Next */}
-            <div style={{ ...panelBox, width: MINI_W }}>
-              <span style={lbl}>Next</span>
-              <MiniPiece piece={next} size={miniSize} />
+            {/* Opp board column */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+              <div style={{ height: 34 }} />
+              <div style={{ border: '1.5px solid rgba(244,114,182,0.25)', borderRadius: 3, boxShadow: '0 0 20px rgba(244,114,182,0.1), inset 0 0 20px rgba(0,0,0,0.3)', opacity: isPlaying ? 1 : 0.55 }}>
+                <TetrisBoard board={opponentBoard} cellSize={cellSize} dimmed={!isPlaying} />
+              </div>
             </div>
-          </div>
-        </div>
-
-        {/* ── OPP BOARD COLUMN ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          {/* Empty strip (same height as my score strip) */}
-          <div style={{ height: 34 }} />
-
-          {/* Opp board (no side panels) */}
-          <div style={{
-            border: '1.5px solid rgba(244,114,182,0.25)', borderRadius: 3,
-            boxShadow: '0 0 20px rgba(244,114,182,0.1), inset 0 0 20px rgba(0,0,0,0.3)',
-            opacity: isPlaying ? 1 : 0.55,
-          }}>
-            <TetrisBoard board={opponentBoard} cellSize={cellSize} dimmed={!isPlaying} />
-          </div>
-        </div>
+          </>
+        )}
       </div>
 
       {/* ── Touch controls (mobile only) ── */}
