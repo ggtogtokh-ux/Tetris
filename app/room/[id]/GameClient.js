@@ -225,6 +225,26 @@ export default function GameClient({ roomId }) {
   const router = useRouter()
   const playerNum = searchParams.get('p') || '2'
 
+  // Dynamic cell size — fills the screen
+  const OPP_CELL = 9
+  const PANEL_W = 92   // right side panel width px
+  const [cellSize, setCellSize] = useState(24)
+  useEffect(() => {
+    function calc() {
+      const hPad = 8 + 8  // left pad + gap between board and panel
+      const availW = window.innerWidth - PANEL_W - hPad
+      const topBar = 44
+      const controls = 116   // 2 rows of buttons + paddings
+      const availH = window.innerHeight - topBar - controls - 8
+      const byW = Math.floor(availW / 10)
+      const byH = Math.floor(availH / 20)
+      setCellSize(Math.max(16, Math.min(byW, byH, 38)))
+    }
+    calc()
+    window.addEventListener('resize', calc, { passive: true })
+    return () => window.removeEventListener('resize', calc)
+  }, [])
+
   // Phase: 'waiting' | 'countdown' | 'playing' | 'ended'
   const [phase, setPhase] = useState('waiting')
   const [countdownVal, setCountdownVal] = useState(3)
@@ -686,73 +706,64 @@ export default function GameClient({ roomId }) {
   const isCountdown = phase === 'countdown'
   const timerWarning = timeLeft < 30_000
 
-  const CELL = 24
-  const OPP_CELL = 9
-
-  const numStyle = (color) => ({
-    color, fontWeight: 900, fontSize: 15, lineHeight: 1,
-  })
+  const miniSize = Math.max(11, Math.floor(cellSize * 0.54))
+  const numStyle = (color) => ({ color, fontWeight: 900, fontSize: 14, lineHeight: 1 })
 
   return (
     <main
       className="bg-[#070714] flex flex-col select-none"
-      style={{ touchAction: 'none', overflow: 'hidden', height: '100dvh', maxHeight: '100dvh' }}
+      style={{ touchAction: 'none', overflow: 'hidden', height: '100dvh' }}
     >
-      {/* ── Top bar: timer ── */}
+      {/* ── Top bar ── */}
       <div
-        className="w-full flex items-center justify-center px-4 shrink-0"
-        style={{ background: '#07071a', borderBottom: '1px solid #1e1e4a', padding: '6px 16px' }}
+        className="w-full flex items-center justify-between shrink-0"
+        style={{ background: '#07071a', borderBottom: '1px solid #1e1e4a', padding: '5px 14px' }}
       >
+        <div style={{ textAlign: 'left' }}>
+          <div style={{ color: '#64748b', fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase' }}>You</div>
+          <div style={{ color: '#00ffff', fontWeight: 900, fontSize: 18, textShadow: '0 0 10px rgba(0,255,255,0.6)' }}>{score}</div>
+        </div>
+
         <span
-          className="font-black font-mono text-2xl"
+          className="font-black font-mono"
           style={{
-            color: timerWarning ? '#ef4444' : '#ffffff',
-            textShadow: timerWarning ? '0 0 15px rgba(239,68,68,0.7)' : '0 0 10px rgba(255,255,255,0.2)',
+            fontSize: 22, color: timerWarning ? '#ef4444' : '#ffffff',
+            textShadow: timerWarning ? '0 0 15px rgba(239,68,68,0.7)' : 'none',
             transition: 'color 0.3s',
           }}
         >
           {formatTime(timeLeft)}
         </span>
+
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ color: '#64748b', fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Opp</div>
+          <div style={{ color: '#a855f7', fontWeight: 900, fontSize: 18 }}>{opponentScore}</div>
+        </div>
       </div>
 
-      {/* ── Game area ── */}
+      {/* ── Game area — fills remaining height ── */}
       <div
-        className="flex justify-center items-start shrink-0"
-        style={{ gap: 8, padding: '8px 8px 0', flex: 1, overflow: 'hidden' }}
+        style={{
+          flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'flex-start',
+          gap: 8, padding: '8px 8px 0', overflow: 'hidden',
+        }}
       >
         {/* My board */}
         <div style={{ position: 'relative', flexShrink: 0 }}>
-          <TetrisBoard board={displayBoard} cellSize={CELL} />
+          <TetrisBoard board={displayBoard} cellSize={cellSize} />
           {isCountdown && <CountdownOverlay value={countdownVal} />}
         </div>
 
-        {/* Right side panel */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: CELL * OPP_CELL / 10 * 10 + 0, minWidth: 90, maxWidth: 90 }}>
-          {/* Hold */}
-          <SideBox label="Hold">
-            <MiniPiece piece={held} size={14} />
-          </SideBox>
+        {/* Right panel — fixed PANEL_W */}
+        <div style={{ width: PANEL_W, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <SideBox label="Hold"><MiniPiece piece={held} size={miniSize} /></SideBox>
+          <SideBox label="Next"><MiniPiece piece={next} size={miniSize} /></SideBox>
+          <SideBox label="Score"><span style={numStyle('#fff')}>{score}</span></SideBox>
+          <SideBox label="Lines"><span style={numStyle('#00ffff')}>{lines}</span></SideBox>
 
-          {/* Next */}
-          <SideBox label="Next">
-            <MiniPiece piece={next} size={14} />
-          </SideBox>
-
-          {/* My score */}
-          <SideBox label="You">
-            <p style={numStyle('#00ffff')}>{score}</p>
-          </SideBox>
-
-          {/* Opponent score */}
-          <SideBox label="Opponent">
-            <p style={numStyle('#a855f7')}>{opponentScore}</p>
-          </SideBox>
-
-          {/* Opponent board */}
-          <div style={{ background: '#0a0a20', border: '1px solid #1e1e4a', borderRadius: 10, padding: '6px 8px' }}>
-            <p style={{ color: '#64748b', fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 5 }}>
-              Board
-            </p>
+          {/* Opponent mini board */}
+          <div style={{ background: '#0a0a20', border: '1px solid #1e1e4a', borderRadius: 10, padding: '5px 1px 4px', overflow: 'hidden' }}>
+            <p style={{ color: '#64748b', fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4, paddingLeft: 6 }}>Opp</p>
             <TetrisBoard board={opponentBoard} cellSize={OPP_CELL} dimmed={!isPlaying} />
           </div>
         </div>
@@ -761,7 +772,7 @@ export default function GameClient({ roomId }) {
       {/* ── Touch controls ── */}
       <div
         className="w-full shrink-0"
-        style={{ background: '#07071a', borderTop: '1px solid #1e1e4a', padding: '8px 10px 10px' }}
+        style={{ background: '#07071a', borderTop: '1px solid #1e1e4a', padding: '7px 10px 9px' }}
       >
         <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
           <TouchBtn onPress={() => { holdPiece() }} color="#facc15">
