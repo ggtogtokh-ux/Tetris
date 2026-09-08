@@ -197,7 +197,7 @@ export default function SoloPage() {
       switch (e.key) {
         case 'ArrowLeft':  e.preventDefault(); move(-1); sndMove(); break
         case 'ArrowRight': e.preventDefault(); move(1);  sndMove(); break
-        case 'ArrowDown':  e.preventDefault(); drop();   break
+        case 'ArrowDown':  e.preventDefault(); drop(); sndMove(); break
         case 'ArrowUp':    e.preventDefault(); rotate(); sndRotate(); break
         case ' ':          e.preventDefault(); hardDrop(); sndHardDrop(); break
         case 'Shift': case 'c': case 'C': e.preventDefault(); holdPiece(); break
@@ -256,7 +256,7 @@ export default function SoloPage() {
           </div>
           <div className="flex gap-2">
             <TouchBtn onPress={() => { move(-1); sndMove() }}>←</TouchBtn>
-            <TouchBtn onPress={() => drop()}>↓</TouchBtn>
+            <TouchBtn onPress={() => { drop(); sndMove() }}>↓</TouchBtn>
             <TouchBtn onPress={() => { move(1); sndMove() }}>→</TouchBtn>
           </div>
         </div>

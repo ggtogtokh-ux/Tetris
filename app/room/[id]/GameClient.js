@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useTetris } from '../../../hooks/useTetris'
 import { useRoom } from '../../../hooks/useRoom'
+import { sndMove, sndRotate, sndLock, sndHardDrop, sndLineClear } from '../../../utils/sounds'
 
 // ─── Board Renderer ──────────────────────────────────────────────────────────
 
@@ -269,6 +270,8 @@ export default function GameClient({ roomId }) {
   } = useTetris({
     active: phase === 'playing',
     onGarbage: handleGarbage,
+    onLock: sndLock,
+    onLineClear: sndLineClear,
   })
 
   const scoreRef = useRef(score)
@@ -421,11 +424,11 @@ export default function GameClient({ roomId }) {
     const handleKey = (e) => {
       if (phaseRef.current !== 'playing') return
       switch (e.key) {
-        case 'ArrowLeft': e.preventDefault(); move(-1); break
-        case 'ArrowRight': e.preventDefault(); move(1); break
-        case 'ArrowUp': e.preventDefault(); rotate(); break
-        case 'ArrowDown': e.preventDefault(); drop(); break
-        case ' ': e.preventDefault(); hardDrop(); break
+        case 'ArrowLeft': e.preventDefault(); move(-1); sndMove(); break
+        case 'ArrowRight': e.preventDefault(); move(1); sndMove(); break
+        case 'ArrowUp': e.preventDefault(); rotate(); sndRotate(); break
+        case 'ArrowDown': e.preventDefault(); drop(); sndMove(); break
+        case ' ': e.preventDefault(); hardDrop(); sndHardDrop(); break
       }
     }
     window.addEventListener('keydown', handleKey)
@@ -749,15 +752,15 @@ export default function GameClient({ roomId }) {
       >
         {/* Row 1: Rotate + Hard Drop */}
         <div className="flex gap-2">
-          <TouchBtn onPress={rotate} color="#a855f7">↺ Rotate</TouchBtn>
-          <TouchBtn onPress={hardDrop} color="#00ffff">⬇ Hard Drop</TouchBtn>
+          <TouchBtn onPress={() => { rotate(); sndRotate() }} color="#a855f7">↺ Rotate</TouchBtn>
+          <TouchBtn onPress={() => { hardDrop(); sndHardDrop() }} color="#00ffff">⬇ Hard Drop</TouchBtn>
         </div>
 
         {/* Row 2: Left + Soft Drop + Right */}
         <div className="flex gap-2">
-          <TouchBtn onPress={() => move(-1)} color="#3b82f6">← Left</TouchBtn>
-          <TouchBtn onPress={drop} color="#22c55e">▽ Soft Drop</TouchBtn>
-          <TouchBtn onPress={() => move(1)} color="#3b82f6">→ Right</TouchBtn>
+          <TouchBtn onPress={() => { move(-1); sndMove() }} color="#3b82f6">← Left</TouchBtn>
+          <TouchBtn onPress={() => { drop(); sndMove() }} color="#22c55e">▽ Soft Drop</TouchBtn>
+          <TouchBtn onPress={() => { move(1); sndMove() }} color="#3b82f6">→ Right</TouchBtn>
         </div>
       </div>
 
