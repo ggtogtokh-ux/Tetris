@@ -229,17 +229,20 @@ export default function GameClient({ roomId }) {
   // Layout: [HOLD 32px][gap 3][MY BOARD][gap 3][NEXT 32px] [gap 8] [OPP BOARD]
   const MINI_W = 32
   const [cellSize, setCellSize] = useState(14)
+  const [isTouch, setIsTouch] = useState(false)
   useEffect(() => {
     function calc() {
-      const pad = 16           // 8px left + 8px right
-      const sideW = MINI_W * 2 + 3 * 2  // hold + next + inner gaps
-      const gap = 8            // gap between my col and opp col
+      const touch = window.matchMedia('(hover: none)').matches
+      setIsTouch(touch)
+      const pad = 16
+      const sideW = MINI_W * 2 + 3 * 2
+      const gap = 8
       const avail = window.innerWidth - pad - gap - sideW
-      // avail = MY_BOARD + OPP_BOARD (equal), so each = avail/2
       const byW = Math.floor(avail / 2 / 10)
       const topBar = 46
-      const controls = 114
-      const availH = window.innerHeight - topBar - controls - 12
+      const ctrlH = touch ? 114 : 0
+      const scoreStrip = 36  // Lines/Level strip + gap above board
+      const availH = window.innerHeight - topBar - ctrlH - scoreStrip - 12
       const byH = Math.floor(availH / 20)
       setCellSize(Math.max(10, Math.min(byW, byH, 30)))
     }
@@ -789,24 +792,26 @@ export default function GameClient({ roomId }) {
         </div>
       </div>
 
-      {/* ── Touch controls ── */}
-      <div style={{
-        flexShrink: 0, background: '#06060f', borderTop: '1px solid #1a1a3a',
-        padding: '6px 10px 8px',
-      }}>
-        <div style={{ display: 'flex', gap: 5, marginBottom: 5 }}>
-          <TouchBtn onPress={() => { holdPiece() }} color="#facc15">
-            <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.05em' }}>HOLD</span>
-          </TouchBtn>
-          <TouchBtn onPress={() => { rotate(); sndRotate() }} color="#a855f7">↺</TouchBtn>
-          <TouchBtn onPress={() => { hardDrop(); sndHardDrop() }} color="#00ffff">⤓</TouchBtn>
+      {/* ── Touch controls (mobile only) ── */}
+      {isTouch && (
+        <div style={{
+          flexShrink: 0, background: '#06060f', borderTop: '1px solid #1a1a3a',
+          padding: '6px 10px 8px',
+        }}>
+          <div style={{ display: 'flex', gap: 5, marginBottom: 5 }}>
+            <TouchBtn onPress={() => { holdPiece() }} color="#facc15">
+              <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.05em' }}>HOLD</span>
+            </TouchBtn>
+            <TouchBtn onPress={() => { rotate(); sndRotate() }} color="#a855f7">↺</TouchBtn>
+            <TouchBtn onPress={() => { hardDrop(); sndHardDrop() }} color="#00ffff">⤓</TouchBtn>
+          </div>
+          <div style={{ display: 'flex', gap: 5 }}>
+            <TouchBtn onPress={() => { move(-1); sndMove() }}>←</TouchBtn>
+            <TouchBtn onPress={() => { drop(); sndMove() }}>↓</TouchBtn>
+            <TouchBtn onPress={() => { move(1); sndMove() }}>→</TouchBtn>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 5 }}>
-          <TouchBtn onPress={() => { move(-1); sndMove() }}>←</TouchBtn>
-          <TouchBtn onPress={() => { drop(); sndMove() }}>↓</TouchBtn>
-          <TouchBtn onPress={() => { move(1); sndMove() }}>→</TouchBtn>
-        </div>
-      </div>
+      )}
 
       <style>{`
         @keyframes pulse {
