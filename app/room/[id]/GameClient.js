@@ -225,20 +225,23 @@ export default function GameClient({ roomId }) {
   const router = useRouter()
   const playerNum = searchParams.get('p') || '2'
 
-  // Dynamic cell size — fills the screen
-  const OPP_CELL = 9
-  const PANEL_W = 92   // right side panel width px
-  const [cellSize, setCellSize] = useState(24)
+  // Both boards equal size — fills full width
+  // Layout: [HOLD 32px][gap 3][MY BOARD][gap 3][NEXT 32px] [gap 8] [OPP BOARD]
+  const MINI_W = 32
+  const [cellSize, setCellSize] = useState(14)
   useEffect(() => {
     function calc() {
-      const hPad = 8 + 8  // left pad + gap between board and panel
-      const availW = window.innerWidth - PANEL_W - hPad
-      const topBar = 44
-      const controls = 116   // 2 rows of buttons + paddings
-      const availH = window.innerHeight - topBar - controls - 8
-      const byW = Math.floor(availW / 10)
+      const pad = 16           // 8px left + 8px right
+      const sideW = MINI_W * 2 + 3 * 2  // hold + next + inner gaps
+      const gap = 8            // gap between my col and opp col
+      const avail = window.innerWidth - pad - gap - sideW
+      // avail = MY_BOARD + OPP_BOARD (equal), so each = avail/2
+      const byW = Math.floor(avail / 2 / 10)
+      const topBar = 46
+      const controls = 114
+      const availH = window.innerHeight - topBar - controls - 12
       const byH = Math.floor(availH / 20)
-      setCellSize(Math.max(16, Math.min(byW, byH, 38)))
+      setCellSize(Math.max(10, Math.min(byW, byH, 30)))
     }
     calc()
     window.addEventListener('resize', calc, { passive: true })
@@ -248,7 +251,6 @@ export default function GameClient({ roomId }) {
   // Phase: 'waiting' | 'countdown' | 'playing' | 'ended'
   const [phase, setPhase] = useState('waiting')
   const [countdownVal, setCountdownVal] = useState(3)
-  const [timeLeft, setTimeLeft] = useState(120_000)
   const [opponentBoard, setOpponentBoard] = useState(
     Array.from({ length: 20 }, () => Array(10).fill(null))
   )
@@ -262,9 +264,7 @@ export default function GameClient({ roomId }) {
   const phaseRef = useRef(phase)
   useEffect(() => { phaseRef.current = phase }, [phase])
 
-  const timerRef = useRef(null)
   const boardSendRef = useRef(null)
-  const startTimeRef = useRef(null)
 
   // ── Garbage callback (called from useTetris when we clear lines) ──────────
   const garbageRef = useRef(null)
@@ -387,34 +387,11 @@ export default function GameClient({ roomId }) {
     setTimeout(() => {
       if (phaseRef.current !== 'ended') {
         setPhase('playing')
-        startTimeRef.current = Date.now()
-        startTimer()
       }
     }, Math.max(0, msUntilStart))
   }
 
-  // ── Game timer ────────────────────────────────────────────────────────────
-  function startTimer() {
-    if (timerRef.current) clearInterval(timerRef.current)
-    const endTime = Date.now() + 120_000
-    timerRef.current = setInterval(() => {
-      const remaining = endTime - Date.now()
-      setTimeLeft(remaining)
-      if (remaining <= 0) {
-        clearInterval(timerRef.current)
-        if (phaseRef.current === 'playing') {
-          const myScore = scoreRef.current
-          setMyFinalScore(myScore)
-          setOppFinalScore(opponentScoreRef.current)
-          setWinner(myScore >= opponentScoreRef.current ? 'me' : 'opponent')
-          endGame()
-        }
-      }
-    }, 100)
-  }
-
   function endGame() {
-    if (timerRef.current) clearInterval(timerRef.current)
     if (boardSendRef.current) clearInterval(boardSendRef.current)
     setPhase('ended')
   }
@@ -471,7 +448,6 @@ export default function GameClient({ roomId }) {
   // ── Cleanup on unmount ────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
       if (boardSendRef.current) clearInterval(boardSendRef.current)
     }
   }, [])
@@ -704,84 +680,128 @@ export default function GameClient({ roomId }) {
   // ── PLAYING / COUNTDOWN ───────────────────────────────────────────────────
   const isPlaying = phase === 'playing'
   const isCountdown = phase === 'countdown'
-  const timerWarning = timeLeft < 30_000
+  const miniSize = Math.max(7, Math.floor(cellSize * 0.52))
 
-  const miniSize = Math.max(11, Math.floor(cellSize * 0.54))
-  const numStyle = (color) => ({ color, fontWeight: 900, fontSize: 14, lineHeight: 1 })
+  // Shared box style for hold/next/score panels
+  const panelBox = {
+    background: 'rgba(0,0,0,0.4)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: 8,
+    padding: '4px 4px',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+  }
+  const lbl = { color: '#475569', fontSize: 8, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }
 
   return (
     <main
-      className="bg-[#070714] flex flex-col select-none"
-      style={{ touchAction: 'none', overflow: 'hidden', height: '100dvh' }}
+      className="select-none"
+      style={{
+        touchAction: 'none', overflow: 'hidden', height: '100dvh',
+        background: 'linear-gradient(180deg, #070714 0%, #0a0520 100%)',
+        display: 'flex', flexDirection: 'column',
+      }}
     >
-      {/* ── Top bar ── */}
-      <div
-        className="w-full flex items-center justify-between shrink-0"
-        style={{ background: '#07071a', borderBottom: '1px solid #1e1e4a', padding: '5px 14px' }}
-      >
-        <div style={{ textAlign: 'left' }}>
-          <div style={{ color: '#64748b', fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase' }}>You</div>
-          <div style={{ color: '#00ffff', fontWeight: 900, fontSize: 18, textShadow: '0 0 10px rgba(0,255,255,0.6)' }}>{score}</div>
+      {/* ── Top bar: YOU vs OPP ── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '5px 12px', background: '#06060f', borderBottom: '1px solid #1a1a3a', flexShrink: 0,
+      }}>
+        {/* My info */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#00ffff', boxShadow: '0 0 8px #00ffff' }} />
+          <div>
+            <div style={{ color: '#64748b', fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase' }}>You</div>
+            <div style={{ color: '#00ffff', fontWeight: 900, fontSize: 17, lineHeight: 1, textShadow: '0 0 10px rgba(0,255,255,0.6)' }}>{score}</div>
+          </div>
         </div>
 
-        <span
-          className="font-black font-mono"
-          style={{
-            fontSize: 22, color: timerWarning ? '#ef4444' : '#ffffff',
-            textShadow: timerWarning ? '0 0 15px rgba(239,68,68,0.7)' : 'none',
-            transition: 'color 0.3s',
-          }}
-        >
-          {formatTime(timeLeft)}
-        </span>
+        {/* VS center */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ color: '#1e293b', fontSize: 9, letterSpacing: '0.2em', fontWeight: 700 }}>TETRIS BATTLE</div>
+          <div style={{ color: '#334155', fontWeight: 900, fontSize: 16, letterSpacing: '0.2em' }}>VS</div>
+        </div>
 
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ color: '#64748b', fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Opp</div>
-          <div style={{ color: '#a855f7', fontWeight: 900, fontSize: 18 }}>{opponentScore}</div>
+        {/* Opp info */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexDirection: 'row-reverse' }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f472b6', boxShadow: '0 0 8px #f472b6' }} />
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ color: '#64748b', fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Opponent</div>
+            <div style={{ color: '#f472b6', fontWeight: 900, fontSize: 17, lineHeight: 1, textShadow: '0 0 10px rgba(244,114,182,0.6)' }}>{opponentScore}</div>
+          </div>
         </div>
       </div>
 
-      {/* ── Game area — fills remaining height ── */}
-      <div
-        style={{
-          flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'flex-start',
-          gap: 8, padding: '8px 8px 0', overflow: 'hidden',
-        }}
-      >
-        {/* My board */}
-        <div style={{ position: 'relative', flexShrink: 0 }}>
-          <TetrisBoard board={displayBoard} cellSize={cellSize} />
-          {isCountdown && <CountdownOverlay value={countdownVal} />}
+      {/* ── Game area: both boards side by side ── */}
+      <div style={{
+        flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+        gap: 8, padding: '6px 8px 0', overflow: 'hidden',
+      }}>
+
+        {/* ── MY BOARD COLUMN ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          {/* Score/Lines strip above board */}
+          <div style={{ display: 'flex', gap: 4, width: '100%', justifyContent: 'space-around' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={lbl}>Lines</div>
+              <div style={{ color: '#00ffff', fontWeight: 900, fontSize: 13 }}>{lines}</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={lbl}>Level</div>
+              <div style={{ color: '#4ade80', fontWeight: 900, fontSize: 13 }}>{Math.floor(lines / 5) + 1}</div>
+            </div>
+          </div>
+
+          {/* Hold + Board + Next */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 3 }}>
+            {/* Hold */}
+            <div style={{ ...panelBox, width: MINI_W }}>
+              <span style={lbl}>Hold</span>
+              <MiniPiece piece={held} size={miniSize} />
+            </div>
+
+            {/* My board */}
+            <div style={{ position: 'relative', border: '1.5px solid rgba(0,255,255,0.25)', borderRadius: 3, boxShadow: '0 0 20px rgba(0,255,255,0.1), inset 0 0 20px rgba(0,0,0,0.3)' }}>
+              <TetrisBoard board={displayBoard} cellSize={cellSize} />
+              {isCountdown && <CountdownOverlay value={countdownVal} />}
+            </div>
+
+            {/* Next */}
+            <div style={{ ...panelBox, width: MINI_W }}>
+              <span style={lbl}>Next</span>
+              <MiniPiece piece={next} size={miniSize} />
+            </div>
+          </div>
         </div>
 
-        {/* Right panel — fixed PANEL_W */}
-        <div style={{ width: PANEL_W, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
-          <SideBox label="Hold"><MiniPiece piece={held} size={miniSize} /></SideBox>
-          <SideBox label="Next"><MiniPiece piece={next} size={miniSize} /></SideBox>
-          <SideBox label="Score"><span style={numStyle('#fff')}>{score}</span></SideBox>
-          <SideBox label="Lines"><span style={numStyle('#00ffff')}>{lines}</span></SideBox>
+        {/* ── OPP BOARD COLUMN ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          {/* Empty strip (same height as my score strip) */}
+          <div style={{ height: 28 }} />
 
-          {/* Opponent mini board */}
-          <div style={{ background: '#0a0a20', border: '1px solid #1e1e4a', borderRadius: 10, padding: '5px 1px 4px', overflow: 'hidden' }}>
-            <p style={{ color: '#64748b', fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4, paddingLeft: 6 }}>Opp</p>
-            <TetrisBoard board={opponentBoard} cellSize={OPP_CELL} dimmed={!isPlaying} />
+          {/* Opp board (no side panels) */}
+          <div style={{
+            border: '1.5px solid rgba(244,114,182,0.25)', borderRadius: 3,
+            boxShadow: '0 0 20px rgba(244,114,182,0.1), inset 0 0 20px rgba(0,0,0,0.3)',
+            opacity: isPlaying ? 1 : 0.55,
+          }}>
+            <TetrisBoard board={opponentBoard} cellSize={cellSize} dimmed={!isPlaying} />
           </div>
         </div>
       </div>
 
       {/* ── Touch controls ── */}
-      <div
-        className="w-full shrink-0"
-        style={{ background: '#07071a', borderTop: '1px solid #1e1e4a', padding: '7px 10px 9px' }}
-      >
-        <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+      <div style={{
+        flexShrink: 0, background: '#06060f', borderTop: '1px solid #1a1a3a',
+        padding: '6px 10px 8px',
+      }}>
+        <div style={{ display: 'flex', gap: 5, marginBottom: 5 }}>
           <TouchBtn onPress={() => { holdPiece() }} color="#facc15">
-            <span style={{ fontSize: 11, fontWeight: 700 }}>HOLD</span>
+            <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.05em' }}>HOLD</span>
           </TouchBtn>
           <TouchBtn onPress={() => { rotate(); sndRotate() }} color="#a855f7">↺</TouchBtn>
           <TouchBtn onPress={() => { hardDrop(); sndHardDrop() }} color="#00ffff">⤓</TouchBtn>
         </div>
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 5 }}>
           <TouchBtn onPress={() => { move(-1); sndMove() }}>←</TouchBtn>
           <TouchBtn onPress={() => { drop(); sndMove() }}>↓</TouchBtn>
           <TouchBtn onPress={() => { move(1); sndMove() }}>→</TouchBtn>
